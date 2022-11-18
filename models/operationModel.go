@@ -25,8 +25,8 @@ func (u *Operation) BeforeSave(tx *gorm.DB) (err error) {
 	return
 }
 
-func typeIsValid(status string) bool {
-	switch status {
+func typeIsValid(Type string) bool {
+	switch Type {
 	case
 		"addition",
 		"subtraction",

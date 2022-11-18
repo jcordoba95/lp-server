@@ -24,6 +24,14 @@ func ConnectToDB() {
 			&models.Operation{},
 			&models.Record{},
 		)
-		// TODO: Create operations with default costs if they don't exist already
+		// TODO: Find a better way to populate initial DB instead of this + unique_index on Type. Create seeds for Operation.
+		DB.Create([]models.Operation{
+			{Type: "addition", Cost: 10},
+			{Type: "subtraction", Cost: 20},
+			{Type: "multiplication", Cost: 30},
+			{Type: "division", Cost: 40},
+			{Type: "square_root", Cost: 50},
+			{Type: "random_string", Cost: 60},
+		})
 	}
 }

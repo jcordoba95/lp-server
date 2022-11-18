@@ -16,7 +16,7 @@ TODOs:
 
 type User struct {
 	gorm.Model
-	Username string
+	Username string `gorm:"uniqueIndex"`
 	Password string
 	Status   string
 }

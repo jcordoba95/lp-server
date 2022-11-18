@@ -1,10 +1,23 @@
 package controllers
 
 import (
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/jcordoba95/lp-server/initializers"
 	"github.com/jcordoba95/lp-server/models"
 )
+
+func CurrentUser(c *gin.Context) {
+	claims := jwt.ExtractClaims(c)
+	username := claims["id"]
+
+	var user models.User
+	initializers.DB.Where("username = ?", username).First(&user)
+
+	c.JSON(200, gin.H{
+		"user": user,
+	})
+}
 
 func UsersCreate(c *gin.Context) {
 	var body struct {

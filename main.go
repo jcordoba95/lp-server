@@ -1,10 +1,24 @@
 package main
 
 import (
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/jcordoba95/lp-server/controllers"
 	"github.com/jcordoba95/lp-server/initializers"
+	"github.com/jcordoba95/lp-server/models"
 )
+
+type login struct {
+	Username string `form:"username" json:"username" binding:"required"`
+	Password string `form:"password" json:"password" binding:"required"`
+}
+
+var identityKey = "id"
 
 func init() {
 	initializers.LoadEnvVariables()
@@ -13,22 +27,85 @@ func init() {
 
 func main() {
 	r := gin.Default()
+	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
+		Realm:       fmt.Sprintf("lp-jcordoba95-%s", os.Getenv("ENVIRONMENT")),
+		Key:         []byte("secret key"),
+		Timeout:     time.Hour,
+		MaxRefresh:  time.Hour,
+		IdentityKey: identityKey,
+		PayloadFunc: func(data interface{}) jwt.MapClaims {
+			if v, ok := data.(*models.User); ok {
+				return jwt.MapClaims{
+					identityKey: v.Username,
+				}
+			}
+			return jwt.MapClaims{}
+		},
+		IdentityHandler: func(c *gin.Context) interface{} {
+			claims := jwt.ExtractClaims(c)
+			return &models.User{
+				Username: claims[identityKey].(string),
+			}
+		},
+		Authenticator: func(c *gin.Context) (interface{}, error) {
+			var loginVals login
+			if err := c.ShouldBind(&loginVals); err != nil {
+				return "", jwt.ErrMissingLoginValues
+			}
+			var user models.User
+			username := loginVals.Username
+			password := loginVals.Password
 
-	// User Routes
-	r.POST("/users", controllers.UsersCreate)
-	r.PUT("/users/:id", controllers.UsersUpdate)
-	r.GET("/users", controllers.UsersIndex)
-	r.GET("/users/:id", controllers.UsersShow)
-	r.DELETE("/users/:id", controllers.UsersDelete)
+			initializers.DB.Where("username = ? AND password = ?", username, password).First(&user)
+			if &user != nil {
+				return &user, nil
+			}
 
-	// Operation Routes
-	r.POST("/operations", controllers.OperationsCreate)
-	r.PUT("/operations/:id", controllers.OperationsUpdate)
-	r.GET("/operations", controllers.OperationsIndex)
-	r.GET("/operations/:id", controllers.OperationsShow)
-	r.DELETE("/operations/:id", controllers.OperationsDelete)
+			return nil, jwt.ErrFailedAuthentication
+		},
+		Authorizator: func(data interface{}, c *gin.Context) bool {
+			if v, ok := data.(*models.User); ok && v.Username != "" {
+				return true
+			}
+			return false
+		},
+		Unauthorized: func(c *gin.Context, code int, message string) {
+			c.JSON(code, gin.H{
+				"code":    code,
+				"message": message,
+			})
+		},
+		TokenLookup:   "header: Authorization, query: token, cookie: jwt",
+		TokenHeadName: "Bearer",
+		TimeFunc:      time.Now,
+	})
 
-	// Record Routes
+	if err != nil {
+		log.Fatal("JWT Error:" + err.Error())
+	}
 
-	r.Run() // listen and serve on 0.0.0.0:8080
+	errInit := authMiddleware.MiddlewareInit()
+
+	if errInit != nil {
+		log.Fatal("authMiddleware.MiddlewareInit() Error:" + errInit.Error())
+	}
+
+	r.POST("/login", authMiddleware.LoginHandler)
+
+	r.NoRoute(authMiddleware.MiddlewareFunc(), func(c *gin.Context) {
+		claims := jwt.ExtractClaims(c)
+		log.Printf("NoRoute claims: %#v\n", claims)
+		c.JSON(404, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
+	})
+
+	auth := r.Group("/v1")
+	// Refresh time can be longer than token timeout
+	auth.GET("/refresh_token", authMiddleware.RefreshHandler)
+	auth.Use(authMiddleware.MiddlewareFunc())
+	{
+		auth.GET("/users", controllers.UsersIndex)
+		auth.GET("/me", controllers.CurrentUser)
+	}
+
+	r.Run()
 }
