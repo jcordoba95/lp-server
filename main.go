@@ -104,7 +104,9 @@ func main() {
 	auth.Use(authMiddleware.MiddlewareFunc())
 	{
 		auth.GET("/users", controllers.UsersIndex)
-		auth.GET("/me", controllers.CurrentUser)
+		auth.GET("/me", controllers.GetCurrentUser)
+		auth.POST("/records", controllers.RecordsCreate)
+		auth.DELETE("records/:id", controllers.RecordsDelete)
 	}
 
 	r.Run()

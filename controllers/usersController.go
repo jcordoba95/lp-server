@@ -7,13 +7,17 @@ import (
 	"github.com/jcordoba95/lp-server/models"
 )
 
-func CurrentUser(c *gin.Context) {
+func CurrentUser(c *gin.Context) models.User {
 	claims := jwt.ExtractClaims(c)
 	username := claims["id"]
 
 	var user models.User
 	initializers.DB.Where("username = ?", username).First(&user)
+	return user
+}
 
+func GetCurrentUser(c *gin.Context) {
+	user := CurrentUser(c)
 	c.JSON(200, gin.H{
 		"user": user,
 	})
