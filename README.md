@@ -13,6 +13,7 @@ Some basic introduction
   
   4. Make sure to re-source source .bash_profile your current session or simply open new terminal.
 
+  5. Create a database to be used for this project. I used [this free service](https://api.elephantsql.com/) .
 ## Running the server
   1. Make a copy of `env.example.` and create your `.env` and fill out the variables.
 
