@@ -1,15 +1,34 @@
 package controllers
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jcordoba95/lp-server/initializers"
 	"github.com/jcordoba95/lp-server/models"
+	"gorm.io/gorm"
 )
 
+type Pagination struct {
+	Limit int    `json:"limit"`
+	Page  int    `json:"page"`
+	Sort  string `json:"sort"`
+	Like  string `json:"like"`
+}
+
 func RecordsIndex(c *gin.Context) {
-	// Return paginated index: https://articles.wesionary.team/implement-pagination-in-golang-using-gorm-and-gin-b4ad8e2932a6
+	pagination := generatePaginationFromRequest(c)
+	var record models.Record
+	records, err := getPaginatedRecordsIndex(&record, &pagination)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+	}
+	c.JSON(200, gin.H{
+		"records": records,
+	})
 }
 
 func RecordsCreate(c *gin.Context) {
@@ -135,4 +154,59 @@ func deleteRecord(record models.Record) (error, models.Record) {
 	}
 
 	return tx.Commit().Error, newRecord
+}
+
+func generatePaginationFromRequest(c *gin.Context) Pagination {
+	limit := 10
+	page := 1
+	sort := "created_at asc"
+	like := ""
+	query := c.Request.URL.Query()
+	for key, value := range query {
+		queryValue := value[len(value)-1]
+		switch key {
+		case "limit":
+			limit, _ = strconv.Atoi(queryValue)
+			break
+		case "page":
+			page, _ = strconv.Atoi(queryValue)
+			break
+		case "like":
+			like = queryValue
+			break
+		case "sort":
+			sort = queryValue
+			break
+
+		}
+	}
+
+	return Pagination{
+		Limit: limit,
+		Page:  page,
+		Sort:  sort,
+		Like:  like,
+	}
+}
+
+func getPaginatedRecordsIndex(record *models.Record, pagination *Pagination) (*[]models.Record, error) {
+	// Add partial matches search
+	var records []models.Record
+	offset := (pagination.Page - 1) * pagination.Limit
+	queryBuider := initializers.DB.Limit(pagination.Limit).Offset(offset).Order(pagination.Sort)
+	var result *gorm.DB
+	result = queryBuider.Model(&models.Record{}).Where(record)
+	if pagination.Like != "" {
+		result = result.
+			Where("CAST(amount as TEXT) LIKE ?", "%"+pagination.Like+"%").
+			Or("CAST(user_balance as TEXT) LIKE ?", "%"+pagination.Like+"%").
+			Or("operation_response LIKE ?", "%"+pagination.Like+"%").
+			Find(&records)
+	} else {
+		result = result.Find(&records)
+	}
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &records, nil
 }

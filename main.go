@@ -79,13 +79,11 @@ func main() {
 		TokenHeadName: "Bearer",
 		TimeFunc:      time.Now,
 	})
-
 	if err != nil {
 		log.Fatal("JWT Error:" + err.Error())
 	}
 
 	errInit := authMiddleware.MiddlewareInit()
-
 	if errInit != nil {
 		log.Fatal("authMiddleware.MiddlewareInit() Error:" + errInit.Error())
 	}
@@ -105,6 +103,7 @@ func main() {
 	{
 		auth.GET("/users", controllers.UsersIndex)
 		auth.GET("/me", controllers.GetCurrentUser)
+		auth.GET("/records", controllers.RecordsIndex)
 		auth.POST("/records", controllers.RecordsCreate)
 		auth.DELETE("records/:id", controllers.RecordsDelete)
 	}
