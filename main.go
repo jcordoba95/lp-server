@@ -98,7 +98,7 @@ func main() {
 
 	auth := r.Group("/v1")
 	// Refresh time can be longer than token timeout
-	auth.GET("/refresh_token", authMiddleware.RefreshHandler)
+	// auth.GET("/refresh_token", authMiddleware.RefreshHandler)
 	auth.Use(authMiddleware.MiddlewareFunc())
 	{
 		auth.GET("/users", controllers.UsersIndex)

@@ -29,3 +29,14 @@ balance. If the user's balance isn't enough to cover the request cost, the reque
 
     CompileDaemon -command="./lp-server"
 
+## Testing
+To run tests:  
+
+    go test -v ./...
+
+
+
+WIP/TODO:  
+ - Create test db with some initial data
+ - Create E2E tests for records controller
+ - Create Unit tests for for small functions in models
