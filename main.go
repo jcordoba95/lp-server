@@ -7,6 +7,7 @@ import (
 	"time"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jcordoba95/lp-server/controllers"
 	"github.com/jcordoba95/lp-server/initializers"
@@ -27,6 +28,12 @@ func init() {
 
 func main() {
 	r := gin.Default()
+	r.SetTrustedProxies(nil)
+	config := cors.DefaultConfig()
+	config.AddAllowHeaders("Content-Type,access-control-allow-origin, access-control-allow-headers, Authorization")
+	config.AllowAllOrigins = true
+	r.Use(cors.New(config))
+
 	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       fmt.Sprintf("lp-jcordoba95-%s", os.Getenv("ENVIRONMENT")),
 		Key:         []byte("secret key"),
@@ -97,8 +104,6 @@ func main() {
 	})
 
 	auth := r.Group("/v1")
-	// Refresh time can be longer than token timeout
-	// auth.GET("/refresh_token", authMiddleware.RefreshHandler)
 	auth.Use(authMiddleware.MiddlewareFunc())
 	{
 		auth.GET("/users", controllers.UsersIndex)
@@ -108,5 +113,5 @@ func main() {
 		auth.DELETE("records/:id", controllers.RecordsDelete)
 	}
 
-	r.Run()
+	r.Run(os.Getenv("PORT"))
 }
