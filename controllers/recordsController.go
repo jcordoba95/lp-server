@@ -20,7 +20,7 @@ type Pagination struct {
 func RecordsIndex(c *gin.Context) {
 	pagination := generatePaginationFromRequest(c)
 	var record models.Record
-	records, err := getPaginatedRecordsIndex(&record, &pagination)
+	records, totalRecords, err := getPaginatedRecordsIndex(&record, &pagination)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": err.Error(),
@@ -28,6 +28,7 @@ func RecordsIndex(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{
 		"records": records,
+		"total":   totalRecords,
 	})
 }
 
@@ -164,6 +165,9 @@ func generatePaginationFromRequest(c *gin.Context) Pagination {
 	query := c.Request.URL.Query()
 	for key, value := range query {
 		queryValue := value[len(value)-1]
+		if queryValue == "" {
+			continue
+		}
 		switch key {
 		case "limit":
 			limit, _ = strconv.Atoi(queryValue)
@@ -177,7 +181,6 @@ func generatePaginationFromRequest(c *gin.Context) Pagination {
 		case "sort":
 			sort = queryValue
 			break
-
 		}
 	}
 
@@ -189,7 +192,7 @@ func generatePaginationFromRequest(c *gin.Context) Pagination {
 	}
 }
 
-func getPaginatedRecordsIndex(record *models.Record, pagination *Pagination) (*[]models.Record, error) {
+func getPaginatedRecordsIndex(record *models.Record, pagination *Pagination) (*[]models.Record, int64, error) {
 	// Add partial matches search
 	var records []models.Record
 	offset := (pagination.Page - 1) * pagination.Limit
@@ -206,7 +209,10 @@ func getPaginatedRecordsIndex(record *models.Record, pagination *Pagination) (*[
 		result = result.Find(&records)
 	}
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, 0, result.Error
 	}
-	return &records, nil
+	var totalRecords int64
+	initializers.DB.Model(record).Count(&totalRecords)
+
+	return &records, totalRecords, nil
 }

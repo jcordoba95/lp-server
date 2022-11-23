@@ -109,6 +109,7 @@ func main() {
 		auth.GET("/users", controllers.UsersIndex)
 		auth.GET("/me", controllers.GetCurrentUser)
 		auth.GET("/records", controllers.RecordsIndex)
+		auth.GET("/operations", controllers.OperationsIndex)
 		auth.POST("/records", controllers.RecordsCreate)
 		auth.DELETE("records/:id", controllers.RecordsDelete)
 	}
