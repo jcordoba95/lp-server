@@ -2,8 +2,11 @@ package models
 
 import (
 	"errors"
+	"io/ioutil"
 	"math"
+	"net/http"
 	"strconv"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -62,8 +65,17 @@ func DoOperation(Type string, a int, b int) (string, error) {
 		stringRes := strconv.FormatFloat(res, 'f', -1, 64)
 		return stringRes, nil
 	case "random_string":
-		// TODO: method to generate random string from API here
-		return "abc123", nil // mock for now.
+		response, err := http.Get("https://www.random.org/strings/?num=1&len=10&digits=on&loweralpha=on&unique=off&format=plain&rnd=new")
+		if err != nil {
+			return "", err
+		}
+
+		responseData, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return "", err
+		}
+		// remove new line at the end of the response and return random string
+		return strings.TrimSuffix(string(responseData), "\n"), nil
 	default:
 		return "", errors.New("Invalid Operation Type")
 	}
