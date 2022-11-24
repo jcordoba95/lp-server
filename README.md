@@ -39,4 +39,3 @@ To run tests:
 WIP/TODO:  
  - Create test db with some initial data
  - Create E2E tests for records controller
- - Create Unit tests for for small functions in models
